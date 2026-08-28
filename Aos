@@ -55,3 +55,6 @@ git push -u origin "$BRANCH"
 # 推送标签
 git push origin v1.0.0
 # 或者一次性推送所有标签： git push origin --tags
+cd /home/user/.super_doubao/super-doubao-runtime/workspace/aos-core
+git push -u origin master
+git push origin v1.0.0
