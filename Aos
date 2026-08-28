@@ -1,0 +1,57 @@
+cd /home/user/.super_doubao/super-doubao-runtime/workspace/aos-core
+
+# 检查本地状态
+git status
+git log --oneline -3
+git branch --show-current
+git tag -l
+
+# 绑定远端（请用仓库实际 owner/repo 的小写形式）
+git remote remove origin 2>/dev/null || true
+git remote add origin https://github.com/hansehu19-ctrl/aos-core-push.git
+git remote -v
+
+# 把远端内容抓下来以便比较（不合并）
+git fetch origin --tags
+
+# 查看远端默认分支引用（确认远端是 main 还是 master）
+git ls-remote --symref origin HEAD
+
+# 设置当前分支变量
+BRANCH=$(git branch --show-current)
+echo "当前分支: $BRANCH"
+
+# 如果还没 VERSION 文件（需要根目录有 VERSION = v1.0.0）
+if [ ! -f VERSION ]; then
+  echo "v1.0.0" > VERSION
+  git add VERSION
+  git commit -m "feat: AOS Core v1.0.0 初始版本"
+fi
+
+# 创建带注释的 v1.0.0 标签（如果不存在）
+if ! git rev-parse v1.0.0 >/dev/null 2>&1; then
+  git tag -a v1.0.0 -m "v1.0.0"
+  echo "已创建注释标签 v1.0.0"
+else
+  echo "标签 v1.0.0 已存在，本地指向 $(git rev-parse v1.0.0)"
+fi
+
+# 检查本地分支与远端是否可直接快进推送
+if git ls-remote --heads origin $BRANCH | grep -q .; then
+  # 远端存在同名分支，检查是否有 diverge
+  REMOTE_SHA=$(git rev-parse origin/$BRANCH 2>/dev/null || true)
+  LOCAL_SHA=$(git rev-parse $BRANCH)
+  if [ -n "$REMOTE_SHA" ]; then
+    echo "远端 $BRANCH 存在，远端SHA=$REMOTE_SHA, 本地SHA=$LOCAL_SHA"
+    # 统计差异
+    git rev-list --left-right --count origin/$BRANCH...$BRANCH
+    echo "如果推送被拒绝，请先执行 git pull --rebase origin $BRANCH 并解决冲突后再 push。"
+  fi
+fi
+
+# 推送当前分支（第一次用 -u 设置上游）
+git push -u origin "$BRANCH"
+
+# 推送标签
+git push origin v1.0.0
+# 或者一次性推送所有标签： git push origin --tags
